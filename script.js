@@ -9,9 +9,19 @@ const API_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/ge
 
 function addMessage(content, sender = 'user') {
   const message = document.createElement('div');
-  message.className = sender === 'user' ? 'user-message' : 'bot-message';
-  message.textContent = content;
+  
+  // Style the message based on sender (user or bot)
+  message.classList.add('message');
+  message.classList.add(sender === 'user' ? 'user' : 'bot');
+  
+  const messageContent = document.createElement('span');
+  messageContent.textContent = content;
+  message.appendChild(messageContent);
+  
+  // Add the message to the messages container
   messagesDiv.appendChild(message);
+  
+  // Auto-scroll to the bottom
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
@@ -23,7 +33,9 @@ async function sendMessageToGemini(promptText) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        prompt: { text: promptText }, // Corrected JSON structure
+        contents: [{
+          parts: [{ text: promptText }],
+        }],
       }),
     });
 
@@ -35,40 +47,31 @@ async function sendMessageToGemini(promptText) {
 
     const data = await response.json();
     console.log('API Response:', data);
-    return data.candidates[0]?.content || 'No response received.';
+
+    // Extract the response text
+    const botResponse = data.candidates[0]?.content?.parts[0]?.text || 'No response received.';
+    return botResponse;
   } catch (error) {
     console.error('Request Error:', error);
     return 'An error occurred while processing your request.';
   }
 }
 
-// Handle sending messages
+// Handle sending messages when clicking the send button
 sendBtn.addEventListener('click', async () => {
   const message = userInput.value.trim();
   if (message) {
-    addMessage(message, 'user');
-    userInput.value = '';
-    const reply = await sendMessageToGemini(message);
-    addMessage(reply, 'bot');
+    addMessage(message, 'user'); // Display user message
+    userInput.value = ''; // Clear the input field
+
+    const reply = await sendMessageToGemini(message); // Send to API and get reply
+    addMessage(reply, 'bot'); // Display bot's reply
   }
 });
 
-// Send message on Enter key press
+// Send message when the Enter key is pressed
 userInput.addEventListener('keypress', async (event) => {
   if (event.key === 'Enter') {
-    sendBtn.click();
-  }
-});
-
-// Toggle emoji picker visibility
-emojiBtn.addEventListener('click', () => {
-  emojiPicker.style.display =
-    emojiPicker.style.display === 'block' ? 'none' : 'block';
-});
-
-// Add emoji to the input field
-emojiPicker.addEventListener('click', (event) => {
-  if (event.target.tagName === 'SPAN') {
-    userInput.value += event.target.textContent;
+    sendBtn.click(); // Trigger click on send button
   }
 });
